@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import abc
+import contextlib
+import copy
 import enum
 import uuid
-import contextlib
 
 import addict as dictlib
 
@@ -36,6 +37,15 @@ class GraphObject(abc.ABC):
         self.updated_at = kwargs.get('updated_at')
         self.deleted_at = kwargs.get('deleted_at')
 
+    def serialize(self):
+        return {
+            'id': self.id,
+            'properties': copy.deepcopy(self.properties),
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
+            'deleted_at': self.deleted_at
+        }
+
 
 class Node(GraphObject):
 
@@ -47,6 +57,14 @@ class Node(GraphObject):
     def __repr__(self):
         return "<Node id=%s properties=%s kind=%s>" % (
             self.id, self.properties, self.kind)
+
+    def serialize(self):
+        serialized = super().serialize()
+        serialized.update({
+            'origin': self.origin,
+            'kind': self.kind
+        })
+        return serialized
 
 
 class Link(GraphObject):

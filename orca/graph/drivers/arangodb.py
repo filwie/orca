@@ -103,7 +103,7 @@ class ArangoDBDriver(driver.Driver):
     def add_node(self, node):
         query_pattern = (
             'INSERT %(document)s INTO nodes')
-        document = self._serialize_node(node)
+        document = self._serialize(node)
         self._execute_aql(query_pattern, document=document)
 
     def update_node(self, node):
@@ -112,7 +112,7 @@ class ArangoDBDriver(driver.Driver):
             'FILTER node.deleted_at == null '
             'FILTER node.id == "%(node_id)s" '
             'UPDATE node WITH %(document)s IN nodes')
-        document = self._serialize_node(node)
+        document = self._serialize(node)
         self._execute_aql(query_pattern, node_id=node.id, document=document)
 
     def delete_node(self, node):
@@ -169,7 +169,7 @@ class ArangoDBDriver(driver.Driver):
             'LIMIT 1 RETURN node) '
             'LET link = MERGE(%(document)s, {"_from": source._id, "_to": target._id})'
             'INSERT link INTO links')
-        document = self._serialize_link(link)
+        document = self._serialize(link)
         self._execute_aql(
             query_pattern, source_id=link.source.id, target_id=link.target.id, document=document)
 
@@ -179,7 +179,7 @@ class ArangoDBDriver(driver.Driver):
             'FILTER link.deleted_at == null '
             'FILTER link.id == "%(link_id)s" '
             'UPDATE link WITH %(document)s IN links')
-        document = self._serialize_link(link)
+        document = self._serialize(link)
         self._execute_aql(query_pattern, link_id=link.id, document=document)
 
     def delete_link(self, link):
@@ -235,16 +235,8 @@ class ArangoDBDriver(driver.Driver):
         cursor = self._database.aql.execute(query)
         return list(cursor)
 
-    def _serialize_node(self, node):
-        document = {}
-        document['id'] = node.id
-        document['origin'] = node.origin
-        document['kind'] = node.kind
-        document['properties'] = copy.deepcopy(node.properties)
-        document['created_at'] = node.created_at
-        document['updated_at'] = node.updated_at
-        document['deleted_at'] = node.deleted_at
-        return json.dumps(document)
+    def _serialize(self, graph_obj):
+        return json.dumps(graph_obj.serialize())
 
     def _build_node_obj(self, node_doc):
         node_id = node_doc.pop('id')
@@ -257,15 +249,6 @@ class ArangoDBDriver(driver.Driver):
         return graph.Node(
             node_id, properties, origin, kind,
             created_at=created_at, updated_at=updated_at, deleted_at=deleted_at)
-
-    def _serialize_link(self, link):
-        document = {}
-        document['id'] = link.id
-        document['properties'] = copy.deepcopy(link.properties)
-        document['created_at'] = link.created_at
-        document['updated_at'] = link.updated_at
-        document['deleted_at'] = link.deleted_at
-        return json.dumps(document)
 
     def _build_link_obj(self, link_doc, source_doc, target_doc):
         link_id = link_doc.pop('id')
